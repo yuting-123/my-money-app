@@ -14,7 +14,6 @@
   <link rel="manifest" href="manifest.json">
 
   <title>行動分析記帳本</title>
-
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
   <style>
@@ -28,14 +27,13 @@
       background:var(--bg); color:var(--text); padding-bottom: calc(var(--nav-height) + 20px);
     }
     .container { padding: 12px; max-width: 600px; margin: 0 auto; }
-    .header { padding: 20px 16px 5px; font-size: 18px; font-weight: 800; color: var(--accent); }
+    .header { padding: 20px 16px 5px; font-size: 20px; font-weight: 800; color: var(--accent); }
 
     /* 統計區塊 */
     .stat-card { background: linear-gradient(145deg, #1c2128, #161b22); border: 1px solid var(--line); border-radius: 20px; padding: 18px; margin-bottom: 12px; }
     .stat-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
     .stat-main-num { font-size: 28px; font-weight: 900; color: var(--text); margin: 5px 0; }
     .top-rank-item { display: flex; justify-content: space-between; font-size: 13px; margin-top: 8px; padding: 4px 0; border-bottom: 1px solid #21262d; }
-    .top-rank-item:last-child { border: none; }
 
     /* 比例條 */
     .ratio-bar-container { margin-bottom: 12px; }
@@ -63,20 +61,24 @@
     .key.confirm { background: var(--accent); color: #000; grid-column: span 2; }
 
     .pill-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 15px; }
-    .pill { padding: 10px 4px; border-radius: 10px; border: 1px solid var(--line); background: #0d1117; color: var(--text); font-size: 12px; cursor: pointer; text-align: center; white-space: nowrap; overflow: hidden; }
+    .pill { padding: 10px 4px; border-radius: 10px; border: 1px solid var(--line); background: #0d1117; color: var(--text); font-size: 12px; cursor: pointer; text-align: center; }
     .pill.active { background: var(--accent); color: #000; border-color: var(--accent); font-weight: bold; }
 
+    /* 底部導覽列 - 還原原始大小 */
     .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; height: var(--nav-height); background: rgba(22, 27, 34, 0.96); backdrop-filter: blur(12px); border-top: 1px solid var(--line); display: flex; justify-content: space-around; align-items: center; z-index: 100; }
-    .nav-item { display: flex; flex-direction: column; align-items: center; color: var(--muted); font-size: 10px; gap: 4px; flex: 1; cursor: pointer; }
+    .nav-item { display: flex; flex-direction: column; align-items: center; color: var(--muted); text-decoration: none; font-size: 11px; gap: 4px; flex: 1; cursor: pointer; }
     .nav-item.active { color: var(--accent); }
+    .nav-icon { font-size: 20px; } /* 圖示還原 */
+
     .btn-save { width: 100%; padding: 18px; border-radius: 16px; border: none; background: var(--accent); color: #000; font-size: 18px; font-weight: 800; cursor: pointer; margin-top: 15px; }
 
+    /* 明細列表項目 */
     .list-item { background: var(--card); border-bottom: 1px solid var(--line); padding: 14px; display: flex; justify-content: space-between; align-items: center; }
     
-    /* 設定頁面管理樣式 */
-    .set-item { display: flex; align-items: center; background: #0d1117; padding: 12px; border-radius: 12px; margin-bottom: 8px; border: 1px solid var(--line); }
-    .set-item.dragging { opacity: 0.4; border: 1px dashed var(--accent); }
-    .drag-handle { cursor: grab; padding-right: 15px; color: var(--muted); font-size: 20px; user-select: none; }
+    /* 設定管理樣式 */
+    .set-item { display: flex; align-items: center; background: #0d1117; padding: 14px; border-radius: 12px; margin-bottom: 8px; border: 1px solid var(--line); touch-action: none; }
+    .set-item.dragging { opacity: 0.5; background: #1c2128; border-color: var(--accent); }
+    .drag-handle { cursor: grab; padding-right: 18px; color: var(--muted); font-size: 22px; user-select: none; }
   </style>
 </head>
 <body>
@@ -90,66 +92,43 @@
         <div class="stat-main-num dashTotal">$ 0</div>
         <div id="dashTopThree"></div>
       </div>
-
       <div class="card">
-        <label>日期</label>
-        <input id="dateInput" type="date" style="margin-bottom: 15px;" />
-        <label>分類</label>
-        <div id="categoryPills" class="pill-grid"></div>
-        <label>付款方式</label>
-        <div id="paymentPills" class="pill-grid"></div>
-        <label>備註</label>
-        <textarea id="noteInput" rows="2" placeholder="備註內容..."></textarea>
+        <label>日期</label><input id="dateInput" type="date" style="margin-bottom:15px;" />
+        <label>分類</label><div id="categoryPills" class="pill-grid"></div>
+        <label>付款方式</label><div id="paymentPills" class="pill-grid"></div>
+        <label>備註</label><textarea id="noteInput" rows="2" placeholder="備註內容..."></textarea>
       </div>
-
       <div class="card">
-        <label>金額</label>
-        <input id="amountInput" type="text" readonly placeholder="0" style="color:var(--accent); font-weight:800; text-align:right; margin-bottom: 15px;" />
-        <div class="calc-box">
-          <div class="calc-display"><div id="calcExpr"></div><div id="calcResult">0</div></div>
-          <div class="calc-grid" id="calcGrid"></div>
-        </div>
+        <label>金額確認</label><input id="amountInput" type="text" readonly placeholder="0" style="color:var(--accent); font-weight:800; text-align:right; margin-bottom:15px;" />
+        <div class="calc-box"><div class="calc-display"><div id="calcExpr"></div><div id="calcResult">0</div></div><div class="calc-grid" id="calcGrid"></div></div>
         <button class="btn-save" id="saveBtn">儲存紀錄</button>
       </div>
     </div>
 
     <div id="page-list" class="page">
-      <div class="stat-card">
-        <div class="stat-label">本月總支出明細</div>
-        <div class="stat-main-num dashTotal">$ 0</div>
-        <div id="ratioBars" style="margin-top: 15px; border-top: 1px solid #30363d; padding-top: 15px;"></div>
-      </div>
-      <div class="card" style="display:flex; justify-content:space-between; align-items:center;">
-        <input id="monthPicker" type="month" style="width: auto; padding: 8px;" />
-        <button onclick="exportToExcel()" style="color:var(--accent); background:none; border:none; font-weight:bold;">匯出 EXCEL</button>
-      </div>
+      <div class="stat-card"><div class="stat-label">本月總支出明細</div><div class="stat-main-num dashTotal">$ 0</div><div id="ratioBars" style="margin-top:15px; border-top:1px solid #30363d; padding-top:15px;"></div></div>
+      <div class="card" style="display:flex; justify-content:space-between; align-items:center;"><input id="monthPicker" type="month" style="width:auto; padding:8px;" /><button onclick="exportToExcel()" style="color:var(--accent); background:none; border:none; font-weight:bold;">匯出 EXCEL</button></div>
       <div id="historyList"></div>
     </div>
 
     <div id="page-settings" class="page">
       <div class="card">
-        <h2>分類管理 (拖曳 ≡ 排序)</h2>
-        <div style="display:flex; gap:8px; margin-bottom:12px;">
-          <input id="newCatInput" type="text" placeholder="新分類名稱" />
-          <button onclick="addItem('categories')" style="background:var(--accent); border:none; padding:0 15px; border-radius:12px; color:#000; font-weight:bold;">＋</button>
-        </div>
-        <div id="catSetList"></div>
+        <h2>分類管理 (長按 ≡ 排序)</h2>
+        <div style="display:flex; gap:8px; margin-bottom:12px;"><input id="newCatInput" type="text" placeholder="新分類名稱" /><button onclick="addItem('categories')" style="background:var(--accent); border:none; padding:0 15px; border-radius:12px; color:#000; font-weight:bold;">＋</button></div>
+        <div id="catSetList" class="drag-container"></div>
       </div>
       <div class="card">
-        <h2>付款方式 (拖曳 ≡ 排序)</h2>
-        <div style="display:flex; gap:8px; margin-bottom:12px;">
-          <input id="newPayInput" type="text" placeholder="新付款名稱" />
-          <button onclick="addItem('payments')" style="background:var(--accent); border:none; padding:0 15px; border-radius:12px; color:#000; font-weight:bold;">＋</button>
-        </div>
-        <div id="paySetList"></div>
+        <h2>付款方式 (長按 ≡ 排序)</h2>
+        <div style="display:flex; gap:8px; margin-bottom:12px;"><input id="newPayInput" type="text" placeholder="新付款名稱" /><button onclick="addItem('payments')" style="background:var(--accent); border:none; padding:0 15px; border-radius:12px; color:#000; font-weight:bold;">＋</button></div>
+        <div id="paySetList" class="drag-container"></div>
       </div>
     </div>
   </div>
 
   <div class="bottom-nav">
-    <div class="nav-item active" data-page="add"><span>＋</span><div>記帳</div></div>
-    <div class="nav-item" data-page="list"><span>☰</span><div>明細</div></div>
-    <div class="nav-item" data-page="settings"><span>⚙</span><div>設定</div></div>
+    <div class="nav-item active" data-page="add"><div class="nav-icon">＋</div><div>記帳</div></div>
+    <div class="nav-item" data-page="list"><div class="nav-icon">☰</div><div>明細</div></div>
+    <div class="nav-item" data-page="settings"><div class="nav-icon">⚙</div><div>設定</div></div>
   </div>
 
   <script>
@@ -164,30 +143,18 @@
     let selectedPay = db.payments[0];
     let calcExpr = "";
 
-    function saveDB() { 
-      localStorage.setItem(LS_KEY, JSON.stringify(db)); 
-      updateStats(); 
-    }
+    function saveDB() { localStorage.setItem(LS_KEY, JSON.stringify(db)); updateStats(); }
 
     function updateStats() {
       const ym = document.getElementById("monthPicker")?.value || new Date().toISOString().slice(0, 7);
       const monthly = db.transactions.filter(t => t.date.startsWith(ym));
       const total = monthly.reduce((s, t) => s + t.amount, 0);
-
       document.querySelectorAll(".dashTotal").forEach(el => el.textContent = `$ ${total.toLocaleString()}`);
-
       const catStats = {};
       monthly.forEach(t => { catStats[t.category] = (catStats[t.category] || 0) + t.amount; });
       const sorted = Object.entries(catStats).sort((a,b) => b[1] - a[1]);
-
-      document.getElementById("dashTopThree").innerHTML = sorted.slice(0, 3).map(([c, a], i) => `
-        <div class="top-rank-item"><span style="color:var(--muted)">${i+1}. ${c}</span><span style="color:var(--accent); font-weight:600">$${a.toLocaleString()}</span></div>
-      `).join('') || '<div style="font-size:12px; color:var(--muted); margin-top:10px;">目前無數據</div>';
-
-      document.getElementById("ratioBars").innerHTML = sorted.map(([c, a]) => {
-        const r = total > 0 ? ((a/total)*100).toFixed(1) : 0;
-        return `<div class="ratio-bar-container"><div class="ratio-header"><span>${c}</span><span>$${a.toLocaleString()} (${r}%)</span></div><div class="ratio-bg"><div class="ratio-fill" style="width:${r}%"></div></div></div>`;
-      }).join('') || '<div style="font-size:12px; color:var(--muted); text-align:center;">目前無分析數據</div>';
+      document.getElementById("dashTopThree").innerHTML = sorted.slice(0, 3).map(([c, a], i) => `<div class="top-rank-item"><span style="color:var(--muted)">${i+1}. ${c}</span><span style="color:var(--accent); font-weight:600">$${a.toLocaleString()}</span></div>`).join('') || '<div style="font-size:12px; color:var(--muted); margin-top:10px;">目前無數據</div>';
+      document.getElementById("ratioBars").innerHTML = sorted.map(([c, a]) => { const r = total > 0 ? ((a/total)*100).toFixed(1) : 0; return `<div class="ratio-bar-container"><div class="ratio-header"><span>${c}</span><span>$${a.toLocaleString()} (${r}%)</span></div><div class="ratio-bg"><div class="ratio-fill" style="width:${r}%"></div></div></div>`; }).join('') || '<div style="font-size:12px; color:var(--muted); text-align:center;">目前無數據</div>';
     }
 
     function setupNav() {
@@ -223,12 +190,7 @@
           else if(k === '=') { try { calcExpr = String(eval(calcExpr.replace(/×/g, '*').replace(/÷/g, '/'))); } catch { alert("算式錯誤"); } }
           else { calcExpr += k; }
           document.getElementById("calcExpr").textContent = calcExpr;
-          try {
-            const res = eval(calcExpr.replace(/×/g, '*').replace(/÷/g, '/')) || 0;
-            const f = Math.round(res * 100) / 100;
-            document.getElementById("calcResult").textContent = f.toLocaleString();
-            document.getElementById("amountInput").value = f;
-          } catch { document.getElementById("calcResult").textContent = "—"; }
+          try { const res = eval(calcExpr.replace(/×/g, '*').replace(/÷/g, '/')) || 0; const f = Math.round(res * 100) / 100; document.getElementById("calcResult").textContent = f.toLocaleString(); document.getElementById("amountInput").value = f; } catch { document.getElementById("calcResult").textContent = "—"; }
         };
       });
     }
@@ -246,14 +208,12 @@
     function renderHistory() {
       const ym = document.getElementById("monthPicker").value;
       const filtered = db.transactions.filter(t => t.date.startsWith(ym)).sort((a,b)=>b.date.localeCompare(a.date));
-      document.getElementById("historyList").innerHTML = filtered.length ? filtered.map(t => `
-        <div class="list-item"><div style="flex:1"><div style="font-size:11px; color:var(--muted)">${t.date} · ${t.payment}</div><div style="font-size:15px; font-weight:600">${t.category}</div><div style="font-size:12px; color:var(--muted)">${t.note||''}</div></div><div style="text-align:right"><div style="font-size:18px; font-weight:800; color:var(--accent)">$${t.amount.toLocaleString()}</div><button onclick="deleteTx(${t.id})" style="color:var(--danger); background:none; border:none; font-size:12px; font-weight:600; margin-top:5px">刪除</button></div></div>
-      `).join('') : '<div style="text-align:center; padding:50px; color:var(--muted)">本月尚無紀錄</div>';
+      document.getElementById("historyList").innerHTML = filtered.length ? filtered.map(t => `<div class="list-item"><div style="flex:1"><div style="font-size:11px; color:var(--muted)">${t.date} · ${t.payment}</div><div style="font-size:15px; font-weight:600">${t.category}</div><div style="font-size:12px; color:var(--muted)">${t.note||''}</div></div><div style="text-align:right"><div style="font-size:18px; font-weight:800; color:var(--accent)">$${t.amount.toLocaleString()}</div><button onclick="deleteTx(${t.id})" style="color:var(--danger); background:none; border:none; font-size:12px; font-weight:600; margin-top:5px">刪除</button></div></div>`).join('') : '<div style="text-align:center; padding:50px; color:var(--muted)">本月尚無紀錄</div>';
     }
 
     window.deleteTx = (id) => { if(confirm("確定刪除？")) { db.transactions = db.transactions.filter(t => t.id !== id); saveDB(); renderHistory(); } };
 
-    // 設定管理與排序
+    // 設定管理與排序 (加入 Touch Support)
     function renderSettings() {
       renderDragList('catSetList', 'categories');
       renderDragList('paySetList', 'payments');
@@ -262,25 +222,36 @@
     function renderDragList(containerId, type) {
       const container = document.getElementById(containerId);
       container.innerHTML = db[type].map((item, idx) => `
-        <div class="set-item" draggable="true" data-index="${idx}" data-type="${type}">
+        <div class="set-item" data-index="${idx}" data-type="${type}">
           <div class="drag-handle">≡</div>
           <span style="flex:1; font-weight:500;">${item}</span>
           <button onclick="delItem('${type}', ${idx})" style="color:var(--danger); background:none; border:none; font-size:18px;">✕</button>
         </div>
       `).join('');
 
-      container.querySelectorAll('.set-item').forEach(el => {
-        el.ondragstart = (e) => { e.dataTransfer.setData('idx', el.dataset.index); el.classList.add('dragging'); };
-        el.ondragend = () => el.classList.remove('dragging');
-        el.ondragover = (e) => {
+      // 手機版拖曳邏輯修正
+      const items = container.querySelectorAll('.set-item');
+      items.forEach(item => {
+        let startY, initialY;
+        const handle = item.querySelector('.drag-handle');
+
+        handle.ontouchstart = (e) => {
+          startY = e.touches[0].clientY;
+          item.classList.add('dragging');
+          initialY = item.offsetTop;
+        };
+
+        handle.ontouchmove = (e) => {
           e.preventDefault();
+          const currentY = e.touches[0].clientY;
+          const afterElement = getDragAfterElement(container, currentY);
           const dragging = document.querySelector('.dragging');
-          if (dragging.dataset.type !== type) return;
-          const afterElement = getDragAfterElement(container, e.clientY);
           if (afterElement == null) container.appendChild(dragging);
           else container.insertBefore(dragging, afterElement);
         };
-        el.ondrop = () => {
+
+        handle.ontouchend = () => {
+          item.classList.remove('dragging');
           const newList = Array.from(container.querySelectorAll('span')).map(s => s.textContent);
           db[type] = newList;
           saveDB(); renderPills();
@@ -314,7 +285,10 @@
     window.exportToExcel = () => {
       const ym = document.getElementById("monthPicker").value;
       const filtered = db.transactions.filter(t => t.date.startsWith(ym));
-      XLSX.writeFile(XLSX.utils.book_new().appendChild(XLSX.utils.json_to_sheet(filtered), "History"), `記帳_${ym}.xlsx`);
+      const ws = XLSX.utils.json_to_sheet(filtered);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "History");
+      XLSX.writeFile(wb, `記帳_${ym}.xlsx`);
     };
 
     init();
