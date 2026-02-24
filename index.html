@@ -14,12 +14,13 @@
   <title>行動分析記帳本</title>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <style>
-    :root { --bg:#000000; --card:#161b22; --text:#ffffff; --muted:#8b949e; --line:#30363d; --accent:#58a6ff; --danger:#f85149; --nav-height: 65px; }
+    :root { --bg:#000000; --card:#161b22; --text:#ffffff; --muted:#8b949e; --line:#30363d; --accent:#58a6ff; --danger:#f85149; --nav-height: 65px; --today-color: #aff5b4; }
     * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
     body { margin:0; font-family: -apple-system, system-ui, sans-serif; background:var(--bg); color:var(--text); padding-bottom: calc(var(--nav-height) + 20px); }
     .container { padding: 12px; max-width: 600px; margin: 0 auto; }
     .header { padding: 20px 16px 5px; font-size: 20px; font-weight: 800; color: var(--accent); }
     .stat-card { background: linear-gradient(145deg, #1c2128, #161b22); border: 1px solid var(--line); border-radius: 20px; padding: 18px; margin-bottom: 12px; }
+    .today-card { background: linear-gradient(145deg, #1a2a1a, #161b22); border: 1px solid #238636; border-radius: 20px; padding: 15px; margin-bottom: 12px; }
     .stat-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
     .stat-main-num { font-size: 28px; font-weight: 900; color: var(--text); margin: 5px 0; }
     .top-rank-item { display: flex; justify-content: space-between; font-size: 13px; margin-top: 8px; padding: 4px 0; border-bottom: 1px solid #21262d; }
@@ -52,7 +53,6 @@
     .btn-save { width: 100%; padding: 18px; border-radius: 16px; border: none; background: var(--accent); color: #000; font-size: 18px; font-weight: 800; cursor: pointer; margin-top: 15px; }
     .list-item { background: var(--card); border-bottom: 1px solid var(--line); padding: 14px; display: flex; justify-content: space-between; align-items: center; }
     .set-item { display: flex; align-items: center; background: #0d1117; padding: 14px; border-radius: 12px; margin-bottom: 8px; border: 1px solid var(--line); touch-action: none; }
-    .set-item.dragging { opacity: 0.5; background: #1c2128; border-color: var(--accent); }
     .drag-handle { cursor: grab; padding-right: 18px; color: var(--muted); font-size: 22px; user-select: none; }
     .ios-tip { font-size: 11px; color: var(--muted); margin-top: 20px; padding: 10px; border: 1px dashed var(--line); border-radius: 10px; line-height: 1.5; }
   </style>
@@ -74,25 +74,41 @@
         <button class="btn-save" id="saveBtn">儲存紀錄</button>
       </div>
     </div>
+
     <div id="page-list" class="page">
-      <div class="stat-card"><div class="stat-label">本月總支出明細</div><div class="stat-main-num dashTotal">$ 0</div><div id="ratioBars" style="margin-top:15px; border-top:1px solid #30363d; padding-top:15px;"></div></div>
-      <div class="card" style="display:flex; justify-content:space-between; align-items:center;"><input id="monthPicker" type="month" style="width:auto; padding:8px;" /><button onclick="exportToExcel()" style="color:var(--accent); background:none; border:none; font-weight:bold;">匯出 EXCEL</button></div>
+      <div class="today-card">
+        <div class="stat-label" style="color:#aff5b4;">今日總支出 (自動換日)</div>
+        <div class="stat-main-num" id="todayTotal" style="color:#aff5b4;">$ 0</div>
+      </div>
+      
+      <div class="stat-card">
+        <div class="stat-label">本月總支出分析</div>
+        <div class="stat-main-num dashTotal">$ 0</div>
+        <div id="ratioBars" style="margin-top:15px; border-top:1px solid #30363d; padding-top:15px;"></div>
+      </div>
+      
+      <div class="card" style="display:flex; justify-content:space-between; align-items:center;">
+        <input id="monthPicker" type="month" style="width:auto; padding:8px;" />
+        <button onclick="exportToExcel()" style="color:var(--accent); background:none; border:none; font-weight:bold;">匯出 EXCEL</button>
+      </div>
       <div id="historyList"></div>
     </div>
+
     <div id="page-settings" class="page">
       <div class="card">
-        <h2>分類管理 (長按 ≡ 排序)</h2>
+        <h2>分類管理</h2>
         <div style="display:flex; gap:8px; margin-bottom:12px;"><input id="newCatInput" type="text" placeholder="新分類名稱" /><button onclick="addItem('categories')" style="background:var(--accent); border:none; padding:0 15px; border-radius:12px; color:#000; font-weight:bold;">＋</button></div>
         <div id="catSetList"></div>
       </div>
       <div class="card">
-        <h2>付款方式 (長按 ≡ 排序)</h2>
+        <h2>付款方式</h2>
         <div style="display:flex; gap:8px; margin-bottom:12px;"><input id="newPayInput" type="text" placeholder="新付款名稱" /><button onclick="addItem('payments')" style="background:var(--accent); border:none; padding:0 15px; border-radius:12px; color:#000; font-weight:bold;">＋</button></div>
         <div id="paySetList"></div>
       </div>
-      <div class="ios-tip">💡 <b>iPhone 使用小撇步：</b><br>請使用 <b>Safari</b> 開啟網址，點擊「分享」圖示，選擇「<b>加入主畫面</b>」，即可像真正 App 一樣全螢幕使用。</div>
+      <div class="ios-tip">💡 <b>iPhone 使用小撇步：</b><br>請使用 <b>Safari</b> 開啟網址並「加入主畫面」。</div>
     </div>
   </div>
+
   <div class="bottom-nav">
     <div class="nav-item active" data-page="add"><div class="nav-icon">＋</div><div>記帳</div></div>
     <div class="nav-item" data-page="list"><div class="nav-icon">☰</div><div>明細</div></div>
@@ -104,14 +120,9 @@
     let db = JSON.parse(localStorage.getItem(LS_KEY)) || { transactions: [], categories: ["早餐","午餐","晚餐","交通","購物","醫療","其他"], payments: ["現金","信用卡","行動支付"] };
     let selectedCat = db.categories[0]; let selectedPay = db.payments[0]; let calcExpr = "";
 
-    // 【核心修正：強制獲取台灣當地日期】
     function getTodayString() {
       const now = new Date();
-      // 使用本地時區格式化成 YYYY-MM-DD
-      const year = now.getFullYear();
-      const month = String(now.getMonth() + 1).padStart(2, '0');
-      const day = String(now.getDate()).padStart(2, '0');
-      return `${year}-${month}-${day}`;
+      return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
     }
 
     function updateToToday() {
@@ -119,20 +130,35 @@
       const dateInput = document.getElementById("dateInput");
       if (dateInput && dateInput.value !== today) {
         dateInput.value = today;
+        updateStats(); // 日期變更時立刻重新計算
       }
     }
 
     function saveDB() { localStorage.setItem(LS_KEY, JSON.stringify(db)); updateStats(); }
 
     function updateStats() {
-      const ym = document.getElementById("monthPicker")?.value || getTodayString().slice(0, 7);
+      const todayStr = getTodayString();
+      const ym = document.getElementById("monthPicker")?.value || todayStr.slice(0, 7);
+      
+      // 計算本月
       const monthly = db.transactions.filter(t => t.date.startsWith(ym));
-      const total = monthly.reduce((s, t) => s + t.amount, 0);
-      document.querySelectorAll(".dashTotal").forEach(el => el.textContent = `$ ${total.toLocaleString()}`);
+      const totalMonthly = monthly.reduce((s, t) => s + t.amount, 0);
+      document.querySelectorAll(".dashTotal").forEach(el => el.textContent = `$ ${totalMonthly.toLocaleString()}`);
+
+      // 【核心功能：計算今日總計】
+      const daily = db.transactions.filter(t => t.date === todayStr);
+      const totalDaily = daily.reduce((s, t) => s + t.amount, 0);
+      const todayEl = document.getElementById("todayTotal");
+      if(todayEl) todayEl.textContent = `$ ${totalDaily.toLocaleString()}`;
+
+      // 排行榜與比例條
       const catStats = {}; monthly.forEach(t => { catStats[t.category] = (catStats[t.category] || 0) + t.amount; });
       const sorted = Object.entries(catStats).sort((a,b) => b[1] - a[1]);
-      document.getElementById("dashTopThree").innerHTML = sorted.slice(0, 3).map(([c, a], i) => `<div class="top-rank-item"><span style="color:var(--muted)">${i+1}. ${c}</span><span style="color:var(--accent); font-weight:600">$${a.toLocaleString()}</span></div>`).join('') || '<div style="font-size:12px; color:var(--muted); margin-top:10px;">目前無數據</div>';
-      document.getElementById("ratioBars").innerHTML = sorted.map(([c, a]) => { const r = total > 0 ? ((a/total)*100).toFixed(1) : 0; return `<div class="ratio-bar-container"><div class="ratio-header"><span>${c}</span><span>$${a.toLocaleString()} (${r}%)</span></div><div class="ratio-bg"><div class="ratio-fill" style="width:${r}%"></div></div></div>`; }).join('') || '<div style="font-size:12px; color:var(--muted); text-align:center;">目前無數據</div>';
+      const top3El = document.getElementById("dashTopThree");
+      if(top3El) top3El.innerHTML = sorted.slice(0, 3).map(([c, a], i) => `<div class="top-rank-item"><span style="color:var(--muted)">${i+1}. ${c}</span><span style="color:var(--accent); font-weight:600">$${a.toLocaleString()}</span></div>`).join('') || '<div style="font-size:12px; color:var(--muted); margin-top:10px;">目前無數據</div>';
+      
+      const ratioBars = document.getElementById("ratioBars");
+      if(ratioBars) ratioBars.innerHTML = sorted.map(([c, a]) => { const r = totalMonthly > 0 ? ((a/totalMonthly)*100).toFixed(1) : 0; return `<div class="ratio-bar-container"><div class="ratio-header"><span>${c}</span><span>$${a.toLocaleString()} (${r}%)</span></div><div class="ratio-bg"><div class="ratio-fill" style="width:${r}%"></div></div></div>`; }).join('') || '<div style="font-size:12px; color:var(--muted); text-align:center;">目前無數據</div>';
     }
 
     function setupNav() {
@@ -143,8 +169,8 @@
           const p = item.dataset.page;
           document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
           document.getElementById('page-' + p).classList.add('active');
-          updateToToday(); // 切換分頁時檢查一次
-          if(p === 'list') renderHistory();
+          updateToToday();
+          if(p === 'list') { renderHistory(); updateStats(); }
           if(p === 'settings') renderSettings();
         };
       });
@@ -180,7 +206,7 @@
       saveDB();
       const b = document.getElementById("saveBtn"); b.textContent = "✓ 已儲存"; b.style.background = "#3fb950";
       setTimeout(() => { b.textContent = "儲存紀錄"; b.style.background = "var(--accent)"; }, 1000);
-      calcExpr = ""; document.getElementById("calcExpr").textContent = ""; document.getElementById("calcResult").textContent = "0"; document.getElementById("amountInput").value = "";
+      calcExpr = ""; document.getElementById("calcResult").textContent = "0"; document.getElementById("amountInput").value = "";
     };
 
     function renderHistory() {
@@ -189,26 +215,18 @@
       document.getElementById("historyList").innerHTML = filtered.length ? filtered.map(t => `<div class="list-item"><div style="flex:1"><div style="font-size:11px; color:var(--muted)">${t.date} · ${t.payment}</div><div style="font-size:15px; font-weight:600">${t.category}</div><div style="font-size:12px; color:var(--muted)">${t.note||''}</div></div><div style="text-align:right"><div style="font-size:18px; font-weight:800; color:var(--accent)">$${t.amount.toLocaleString()}</div><button onclick="deleteTx(${t.id})" style="color:var(--danger); background:none; border:none; font-size:12px; font-weight:600; margin-top:5px">刪除</button></div></div>`).join('') : '<div style="text-align:center; padding:50px; color:var(--muted)">本月尚無紀錄</div>';
     }
 
-    window.deleteTx = (id) => { if(confirm("確定刪除？")) { db.transactions = db.transactions.filter(t => t.id !== id); saveDB(); renderHistory(); } };
+    window.deleteTx = (id) => { if(confirm("確定刪除？")) { db.transactions = db.transactions.filter(t => t.id !== id); saveDB(); renderHistory(); updateStats(); } };
 
     function renderSettings() { renderDragList('catSetList', 'categories'); renderDragList('paySetList', 'payments'); }
 
     function renderDragList(containerId, type) {
       const container = document.getElementById(containerId);
-      container.innerHTML = db[type].map((item, idx) => `
-        <div class="set-item" data-index="${idx}" data-type="${type}">
-          <div class="drag-handle">≡</div><span style="flex:1; font-weight:500;">${item}</span><button onclick="delItem('${type}', ${idx})" style="color:var(--danger); background:none; border:none; font-size:18px;">✕</button>
-        </div>`).join('');
+      container.innerHTML = db[type].map((item, idx) => `<div class="set-item" data-index="${idx}" data-type="${type}"><div class="drag-handle">≡</div><span style="flex:1; font-weight:500;">${item}</span><button onclick="delItem('${type}', ${idx})" style="color:var(--danger); background:none; border:none; font-size:18px;">✕</button></div>`).join('');
       const items = container.querySelectorAll('.set-item');
       items.forEach(item => {
         let startY; const handle = item.querySelector('.drag-handle');
         handle.ontouchstart = (e) => { startY = e.touches[0].clientY; item.classList.add('dragging'); };
-        handle.ontouchmove = (e) => {
-          e.preventDefault(); const currentY = e.touches[0].clientY;
-          const afterElement = getDragAfterElement(container, currentY);
-          const dragging = document.querySelector('.dragging');
-          if (afterElement == null) container.appendChild(dragging); else container.insertBefore(dragging, afterElement);
-        };
+        handle.ontouchmove = (e) => { e.preventDefault(); const currentY = e.touches[0].clientY; const afterElement = getDragAfterElement(container, currentY); const dragging = document.querySelector('.dragging'); if (afterElement == null) container.appendChild(dragging); else container.insertBefore(dragging, afterElement); };
         handle.ontouchend = () => { item.classList.remove('dragging'); const newList = Array.from(container.querySelectorAll('span')).map(s => s.textContent); db[type] = newList; saveDB(); renderPills(); };
       });
     }
@@ -229,10 +247,8 @@
       const m = document.getElementById("monthPicker"); m.value = getTodayString().slice(0, 7);
       m.onchange = () => { renderHistory(); updateStats(); };
       renderPills(); setupCalc(); setupNav(); updateStats();
-      // 多重自動檢查機制
-      setInterval(updateToToday, 30000); // 每 30 秒查一次
-      window.addEventListener('focus', updateToToday); // 回到 App 時查一次
-      document.addEventListener('visibilitychange', () => { if(!document.hidden) updateToToday(); }); // 網頁切換回來時查一次
+      setInterval(updateToToday, 30000); 
+      window.addEventListener('focus', () => { updateToToday(); updateStats(); });
     }
 
     window.exportToExcel = () => {
@@ -244,3 +260,5 @@
   </script>
 </body>
 </html>
+
+
